@@ -1,0 +1,52 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.venv/
+venv/
+env/
+
+# FastAPI
+.env
+.env.*
+*.log
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Media uploads
+media/
+uploads/
+temp/
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.zip
+
+# Database
+*.sqlite3
+
+# Testing
+.coverage
+pytest_cache/
+
+# Docker overrides
+docker-compose.override.yml
+
+# Misc
+*.tmp
