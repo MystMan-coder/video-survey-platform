@@ -4,11 +4,7 @@ from sqlalchemy import text
 from .database import engine, init_db
 from .config import settings
 from . import models
-from .routers import surveys, submissions
 from .routers import surveys, submissions, export
-
-# Import routers
-from .routers import surveys
 
 app = FastAPI(title="Video Survey API", version="0.1.0")
 
@@ -20,15 +16,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(surveys.router)
 app.include_router(submissions.router)
 app.include_router(export.router)
+
 
 @app.on_event("startup")
 async def startup_event():
     init_db()
     print("Database tables created/verified.")
+
 
 @app.get("/health")
 async def health_check():
@@ -38,8 +35,4 @@ async def health_check():
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
-
-    return {
-        "status": "healthy",
-        "database": db_status,
-    }
+    return {"status": "healthy", "database": db_status}

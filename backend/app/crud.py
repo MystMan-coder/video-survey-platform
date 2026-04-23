@@ -27,6 +27,15 @@ def update_survey(db: Session, survey_id: int, updates: schemas.SurveyUpdate) ->
     db.refresh(db_survey)
     return db_survey
 
+def delete_survey(db: Session, survey_id: int) -> bool:
+    db_survey = get_survey(db, survey_id)
+    if not db_survey:
+        return False
+    
+    db.delete(db_survey)
+    db.commit()
+    return True
+
 # ---------- SurveyQuestion CRUD ----------
 def create_question(db: Session, survey_id: int, question_data: schemas.SurveyQuestionCreate) -> models.SurveyQuestion:
     db_question = models.SurveyQuestion(

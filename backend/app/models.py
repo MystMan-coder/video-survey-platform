@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .database import Base
+from .database import Base   # <-- THIS IS REQUIRED
 import enum
 
 # Enums for type safety
@@ -19,10 +19,9 @@ class Survey(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=False)  # published = active
+    is_active = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
     questions = relationship("SurveyQuestion", back_populates="survey", cascade="all, delete-orphan")
     submissions = relationship("SurveySubmission", back_populates="survey")
 
@@ -33,9 +32,8 @@ class SurveyQuestion(Base):
     id = Column(Integer, primary_key=True, index=True)
     survey_id = Column(Integer, ForeignKey("surveys.id", ondelete="CASCADE"), nullable=False)
     question_text = Column(Text, nullable=False)
-    order = Column(Integer, nullable=False)  # 1 to 5
+    order = Column(Integer, nullable=False)
 
-    # Relationship
     survey = relationship("Survey", back_populates="questions")
     answers = relationship("SurveyAnswer", back_populates="question")
 
@@ -45,19 +43,22 @@ class SurveySubmission(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     survey_id = Column(Integer, ForeignKey("surveys.id", ondelete="CASCADE"), nullable=False)
-    ip_address = Column(String(45), nullable=False)  # IPv6 can be up to 45 chars
+    ip_address = Column(String(45), nullable=False)
     device = Column(String(50))
     browser = Column(String(50))
     os = Column(String(50))
-    location = Column(String(100))  # from IP geolocation
+    location = Column(String(100))
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    overall_score = Column(Float, nullable=True)  # average of face scores
+    overall_score = Column(Float, nullable=True)
 
-    # Relationships
     survey = relationship("Survey", back_populates="submissions")
     answers = relationship("SurveyAnswer", back_populates="submission", cascade="all, delete-orphan")
     media_files = relationship("MediaFile", back_populates="submission", cascade="all, delete-orphan")
+
+    @property
+    def answer_count(self) -> int:
+        return len(self.answers)
 
 # SurveyAnswer Table
 class SurveyAnswer(Base):
@@ -68,10 +69,9 @@ class SurveyAnswer(Base):
     question_id = Column(Integer, ForeignKey("survey_questions.id", ondelete="CASCADE"), nullable=False)
     answer = Column(Enum(AnswerChoice), nullable=False)
     face_detected = Column(Boolean, default=False)
-    face_score = Column(Float, nullable=True)  # 0-100
+    face_score = Column(Float, nullable=True)
     face_image_path = Column(String(500), nullable=True)
 
-    # Relationships
     submission = relationship("SurveySubmission", back_populates="answers")
     question = relationship("SurveyQuestion", back_populates="answers")
 
@@ -85,5 +85,4 @@ class MediaFile(Base):
     path = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationship
     submission = relationship("SurveySubmission", back_populates="media_files")
