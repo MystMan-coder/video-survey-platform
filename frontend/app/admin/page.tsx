@@ -45,14 +45,13 @@ export default function AdminDashboard() {
       }
       fetchSurveys();
     } catch (err: any) {
-      // The backend blocks publishing if there aren't exactly 5 questions
       alert(err.response?.data?.detail || "Action failed. Make sure the survey has exactly 5 questions before publishing.");
     }
   };
 
   const deleteSurvey = async (id: number, isCurrentlyActive: boolean) => {
     if (isCurrentlyActive) {
-      alert("⚠️ You must unpublish this survey before you can delete it.");
+      alert("You must unpublish this survey before you can delete it.");
       return;
     }
     
@@ -62,7 +61,7 @@ export default function AdminDashboard() {
         fetchSurveys();
       } catch (err) {
         console.error("Failed to delete", err);
-        alert("Failed to delete. Ensure your backend has a DELETE endpoint for surveys.");
+        alert("Failed to delete survey.");
       }
     }
   };
@@ -118,7 +117,6 @@ export default function AdminDashboard() {
                   </div>
                   
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    {/* Toggle Publish/Unpublish */}
                     <button 
                       onClick={() => togglePublish(survey.id, survey.is_active)}
                       className={`text-sm px-4 py-2 font-medium border rounded transition ${
@@ -130,7 +128,13 @@ export default function AdminDashboard() {
                       {survey.is_active ? 'Unpublish' : 'Publish'}
                     </button>
 
-                    {/* Manage Button */}
+                    <Link 
+                      href={`/admin/survey/${survey.id}/responses`} 
+                      className="text-sm px-4 py-2 bg-green-100 text-green-800 rounded hover:bg-green-200 font-medium transition"
+                    >
+                      Responses
+                    </Link>
+
                     <Link 
                       href={`/admin/survey/${survey.id}`} 
                       className="text-sm px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 font-medium transition"
@@ -138,7 +142,6 @@ export default function AdminDashboard() {
                       Manage
                     </Link>
 
-                    {/* Delete Button */}
                     <button 
                       onClick={() => deleteSurvey(survey.id, survey.is_active)}
                       className="text-sm px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-medium transition"

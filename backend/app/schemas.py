@@ -79,6 +79,19 @@ class MediaUploadResponse(BaseModel):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+# nested schemas used by the admin responses page
+class AnswerDetail(BaseModel):
+    question_id: int
+    answer: str
+    face_score: Optional[float]
+    face_image_path: Optional[str]
+    model_config = ConfigDict(from_attributes=True)
+
+class MediaDetail(BaseModel):
+    type: str
+    path: str
+    model_config = ConfigDict(from_attributes=True)
+
 class SubmissionDetailResponse(BaseModel):
     id: int
     survey_id: int
@@ -91,4 +104,6 @@ class SubmissionDetailResponse(BaseModel):
     completed_at: Optional[datetime]
     overall_score: Optional[float]
     answer_count: int = 0
+    answers: List[AnswerDetail] = []
+    media_files: List[MediaDetail] = []
     model_config = ConfigDict(from_attributes=True)

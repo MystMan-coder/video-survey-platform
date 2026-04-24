@@ -10,35 +10,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (pathname === '/admin/login') {
-      setIsAuthenticated(true); // Let them render the login page
+      setIsAuthenticated(true);
       return;
     }
 
     const authFlag = localStorage.getItem('isAdminAuthenticated');
     const authTime = localStorage.getItem('adminAuthTime');
-
-    //Login time set to 1 hour
+    
+    // Check if logged in AND less than 1 hour has passed (3600000 ms)
     const isSessionValid = authTime && (Date.now() - parseInt(authTime) < 3600000);
 
     if (authFlag === 'true' && isSessionValid) {
       setIsAuthenticated(true);
     } else {
-      // Not authenticated, kick them back to login
-      router.push('/admin/login');
+      handleLogout();
     }
   }, [pathname, router]);
 
   const handleLogout = () => {
     localStorage.removeItem('isAdminAuthenticated');
+    localStorage.removeItem('adminAuthTime');
     router.push('/admin/login');
   };
 
-  // Prevent flashing of admin content before redirect
   if (!isAuthenticated) return null; 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Show a simple admin navbar if not on the login page */}
       {pathname !== '/admin/login' && (
         <nav className="bg-gray-800 text-white p-4 flex justify-between items-center">
           <div className="font-bold text-lg">Survey Platform Admin</div>

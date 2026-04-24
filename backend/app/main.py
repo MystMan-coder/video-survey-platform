@@ -1,10 +1,12 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from .database import engine, init_db
 from .config import settings
 from . import models
-from .routers import surveys, submissions, export
+from .routers import surveys, submissions
 
 app = FastAPI(title="Video Survey API", version="0.1.0")
 
@@ -16,16 +18,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# create the media dir if it doesn't exist yet, then mount it as a static route
+os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+app.mount("/media", StaticFiles(directory=settings.MEDIA_ROOT), name="media")
+
 app.include_router(surveys.router)
 app.include_router(submissions.router)
-app.include_router(export.router)
-
 
 @app.on_event("startup")
 async def startup_event():
     init_db()
     print("Database tables created/verified.")
-
 
 @app.get("/health")
 async def health_check():

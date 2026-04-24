@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
-from datetime import datetime
+from datetime import datetime, timezone
 
 # ---------- Survey CRUD ----------
 def create_survey(db: Session, survey_data: schemas.SurveyCreate) -> models.Survey:
@@ -58,7 +58,6 @@ def delete_all_questions(db: Session, survey_id: int) -> None:
         models.SurveyQuestion.survey_id == survey_id
     ).delete()
     db.commit()
-
 
 # ---------- Submission CRUD ----------
 def create_submission(db: Session, survey_id: int, metadata: dict) -> models.SurveySubmission:
@@ -122,8 +121,8 @@ def complete_submission(db: Session, submission_id: int) -> models.SurveySubmiss
         overall = sum(scores) / len(scores) if scores else 0.0
     else:
         overall = 0.0
-    
-    db_submission.completed_at = datetime.utcnow()
+     
+    db_submission.completed_at = datetime.now(timezone.utc)
     db_submission.overall_score = overall
     db.commit()
     db.refresh(db_submission)

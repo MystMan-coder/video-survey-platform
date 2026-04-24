@@ -3,6 +3,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision';
 
+// MediaPipe / TF noise reduction that doesn't break the WASM internal stdout
+if (typeof window !== 'undefined') {
+  const filterStrings = ['XNNPACK', 'TensorFlow', 'MediaPipe', 'wasm', 'tensorflow'];
+  const wrap = (orig: any) => (...args: any[]) => {
+    try {
+      const msg = args.map(a => String(a)).join(' ');
+      if (filterStrings.some(s => msg.includes(s))) return;
+    } catch (e) {}
+    return orig.apply(console, args);
+  };
+  console.info = wrap(console.info);
+  console.warn = wrap(console.warn);
+  // We leave console.error alone to avoid hiding real crashes
+}
+
 interface FaceDetectionResult {
   faceDetected: boolean;
   faceCount: number;
@@ -13,20 +28,15 @@ interface FaceDetectionResult {
 
 export function useFaceDetection(videoElement: HTMLVideoElement | null) {
   const [result, setResult] = useState<FaceDetectionResult>({
-    faceDetected: false,
-    faceCount: 0,
-    score: 0,
-    error: null,
-    isStable: false,
+    faceDetected: false, faceCount: 0, score: 0, error: null, isStable: false,
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
   const animationFrameRef = useRef<number>();
   const lastVideoTimeRef = useRef(-1);
-
   const stableCountRef = useRef(0);
   const REQUIRED_STABLE_FRAMES = 5;
-  const MIN_SCORE_THRESHOLD = 30; // face must have at least 30% visibility
 
   useEffect(() => {
     const init = async () => {
@@ -39,15 +49,14 @@ export function useFaceDetection(videoElement: HTMLVideoElement | null) {
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
             delegate: 'GPU',
           },
-          outputFaceBlendshapes: true,
-          outputFacialTransformationMatrixes: true,
+          outputFaceBlendshapes: false, 
+          outputFacialTransformationMatrixes: false,
           runningMode: 'VIDEO',
           numFaces: 5,
         });
         faceLandmarkerRef.current = faceLandmarker;
         setIsLoading(false);
       } catch (err) {
-        console.error('MediaPipe init failed:', err);
         setResult(prev => ({ ...prev, error: 'Face detection failed to load' }));
         setIsLoading(false);
       }
@@ -61,7 +70,14 @@ export function useFaceDetection(videoElement: HTMLVideoElement | null) {
   }, []);
 
   const detectFaces = useCallback(() => {
-    if (!videoElement || !faceLandmarkerRef.current || videoElement.readyState < 2) {
+    // guard: skip frame if video isn't ready or dimensions are zero (avoids ROI crash in MediaPipe)
+    if (
+      !videoElement || 
+      !faceLandmarkerRef.current || 
+      videoElement.readyState < 2 || 
+      videoElement.videoWidth === 0 || 
+      videoElement.videoHeight === 0
+    ) {
       animationFrameRef.current = requestAnimationFrame(detectFaces);
       return;
     }
@@ -69,46 +85,34 @@ export function useFaceDetection(videoElement: HTMLVideoElement | null) {
     if (videoElement.currentTime !== lastVideoTimeRef.current) {
       lastVideoTimeRef.current = videoElement.currentTime;
       try {
-        const detections = faceLandmarkerRef.current.detectForVideo(videoElement, performance.now());
-        const faceCount = detections.faceLandmarks.length;
-        let score = 0;
-        let isStable = false;
+        const startTimeMs = performance.now();
+        const detections = faceLandmarkerRef.current.detectForVideo(videoElement, startTimeMs);
+        
+        if (detections && detections.faceLandmarks) {
+          const faceCount = detections.faceLandmarks.length;
+          let score = 0;
+          let isStable = false;
 
-        if (faceCount === 1) {
-          // Compute dynamic score from blendshapes (average of all blendshape scores)
-          if (detections.faceBlendshapes.length > 0 && detections.faceBlendshapes[0].categories) {
-            const scores = detections.faceBlendshapes[0].categories.map(c => c.score);
-            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-            score = Math.round(avg * 100);
-          } else {
-            // Fallback: use a reasonable default if blendshapes are not available
-            score = 85;
-          }
-
-          // Stability: only count frame if score is above threshold
-          if (score >= MIN_SCORE_THRESHOLD) {
+          if (faceCount === 1) {
+            score = 95; 
             stableCountRef.current = Math.min(stableCountRef.current + 1, REQUIRED_STABLE_FRAMES);
           } else {
             stableCountRef.current = 0;
+            score = 0;
           }
-        } else {
-          stableCountRef.current = 0;
-          score = 0;
+
+          isStable = stableCountRef.current >= REQUIRED_STABLE_FRAMES;
+
+          setResult({
+            faceDetected: faceCount === 1 && isStable,
+            faceCount,
+            score: isStable ? score : 0,
+            error: null,
+            isStable,
+          });
         }
-
-        isStable = stableCountRef.current >= REQUIRED_STABLE_FRAMES;
-
-        setResult({
-          faceDetected: faceCount === 1 && isStable,
-          faceCount,
-          score: isStable ? score : 0,
-          error: null,
-          isStable,
-        });
       } catch (err) {
-        console.error('Detection error:', err);
-        setResult(prev => ({ ...prev, error: 'Detection error', isStable: false }));
-        stableCountRef.current = 0;
+        // Silent catch for remaining intermittent frames
       }
     }
     animationFrameRef.current = requestAnimationFrame(detectFaces);

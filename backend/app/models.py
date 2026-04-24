@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .database import Base   # <-- THIS IS REQUIRED
+from .database import Base
 import enum
 
 # Enums for type safety
@@ -23,7 +23,7 @@ class Survey(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     questions = relationship("SurveyQuestion", back_populates="survey", cascade="all, delete-orphan")
-    submissions = relationship("SurveySubmission", back_populates="survey")
+    submissions = relationship("SurveySubmission", back_populates="survey", passive_deletes=True)
 
 # SurveyQuestion Table
 class SurveyQuestion(Base):
@@ -34,8 +34,8 @@ class SurveyQuestion(Base):
     question_text = Column(Text, nullable=False)
     order = Column(Integer, nullable=False)
 
-    survey = relationship("Survey", back_populates="questions")
-    answers = relationship("SurveyAnswer", back_populates="question")
+    survey = relationship("Survey", back_populates="questions", passive_deletes=True)
+    answers = relationship("SurveyAnswer", back_populates="question", passive_deletes=True)
 
 # SurveySubmission Table
 class SurveySubmission(Base):
@@ -52,9 +52,9 @@ class SurveySubmission(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     overall_score = Column(Float, nullable=True)
 
-    survey = relationship("Survey", back_populates="submissions")
-    answers = relationship("SurveyAnswer", back_populates="submission", cascade="all, delete-orphan")
-    media_files = relationship("MediaFile", back_populates="submission", cascade="all, delete-orphan")
+    survey = relationship("Survey", back_populates="submissions", passive_deletes=True)
+    answers = relationship("SurveyAnswer", back_populates="submission", cascade="all, delete-orphan", passive_deletes=True)
+    media_files = relationship("MediaFile", back_populates="submission", cascade="all, delete-orphan", passive_deletes=True)
 
     @property
     def answer_count(self) -> int:

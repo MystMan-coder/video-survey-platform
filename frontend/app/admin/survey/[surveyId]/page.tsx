@@ -14,7 +14,6 @@ export default function SurveyManagement() {
   const [survey, setSurvey] = useState<any>(null);
   const [questionText, setQuestionText] = useState('');
   
-  // State for inline editing
   const [editingOrder, setEditingOrder] = useState<number | null>(null);
   const [editQuestionText, setEditQuestionText] = useState('');
 
@@ -25,7 +24,6 @@ export default function SurveyManagement() {
   const fetchSurveyDetails = async () => {
     try {
       const res = await axios.get(`${API_URL}/api/surveys/${surveyId}`);
-      // Strictly sort by numeric order
       res.data.questions.sort((a: any, b: any) => Number(a.order) - Number(b.order));
       setSurvey(res.data);
     } catch (err) {
@@ -33,7 +31,6 @@ export default function SurveyManagement() {
     }
   };
 
-  // 🎯 THE FIX: Calculate the next available slot once, ensuring it is always a strict Number
   const nextAvailableOrder = useMemo(() => {
     if (!survey || !survey.questions) return 1;
     const existingOrders = survey.questions.map((q: any) => Number(q.order));
@@ -44,15 +41,13 @@ export default function SurveyManagement() {
     return next;
   }, [survey]);
 
-  // --- CRUD Operations ---
-
   const addQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionText || survey.questions.length >= 5) return;
     try {
       await axios.post(`${API_URL}/api/surveys/${surveyId}/questions`, {
         question_text: questionText,
-        order: nextAvailableOrder // Use the robustly calculated order here
+        order: nextAvailableOrder
       });
       setQuestionText('');
       fetchSurveyDetails();
@@ -111,9 +106,18 @@ export default function SurveyManagement() {
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
-        <button onClick={() => router.push('/admin')} className="text-blue-600 hover:underline mb-4 inline-block">
-          &larr; Back to Dashboard
-        </button>
+        <div className="flex justify-between items-center mb-4">
+          <button onClick={() => router.push('/admin')} className="text-blue-600 hover:underline inline-block">
+            &larr; Back to Dashboard
+          </button>
+          
+          <button 
+            onClick={() => router.push(`/admin/survey/${surveyId}/responses`)} 
+            className="text-green-600 hover:underline font-medium inline-block"
+          >
+            View Responses &rarr;
+          </button>
+        </div>
 
         <div className="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-600">
           <div className="flex justify-between items-start mb-6">
@@ -127,7 +131,6 @@ export default function SurveyManagement() {
               </div>
             </div>
             
-            {/* Publish / Unpublish Toggle */}
             <button 
               onClick={togglePublishStatus}
               disabled={!survey.is_active && !isFull}
@@ -143,7 +146,6 @@ export default function SurveyManagement() {
             </button>
           </div>
 
-          {/* Share Link Banner */}
           {survey.is_active && (
             <div className="mb-8 p-4 bg-blue-50 border border-blue-100 rounded-lg">
               <p className="text-sm text-blue-800 font-medium mb-1">Share this link with participants:</p>
@@ -155,14 +157,11 @@ export default function SurveyManagement() {
 
           <hr className="mb-6" />
 
-          {/* Questions List */}
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Survey Questions</h2>
           
           <div className="space-y-3 mb-8">
             {survey.questions?.map((q: any) => (
               <div key={q.id} className="p-4 border rounded-lg bg-gray-50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                
-                {/* View Mode vs Edit Mode */}
                 {editingOrder === Number(q.order) ? (
                   <div className="flex-1 flex gap-2">
                     <input 
@@ -181,7 +180,6 @@ export default function SurveyManagement() {
                       <span className="font-bold text-gray-500 mr-2">Q{q.order}.</span> 
                       {q.question_text}
                     </div>
-                    {/* Controls (Disabled if published) */}
                     {!survey.is_active && (
                       <div className="flex gap-2 shrink-0">
                         <button onClick={() => startEditing(q)} className="text-sm text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1 rounded">Edit</button>
@@ -198,7 +196,6 @@ export default function SurveyManagement() {
             )}
           </div>
 
-          {/* Add New Question Form */}
           {!survey.is_active && !isFull && (
             <form onSubmit={addQuestion} className="flex gap-3 p-4 bg-gray-100 rounded-lg border border-gray-200">
               <span className="py-2 font-bold text-gray-500">Q{nextAvailableOrder}.</span>
@@ -223,7 +220,7 @@ export default function SurveyManagement() {
 
           {survey.is_active && (
             <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm border border-yellow-200">
-              ⚠️ This survey is currently published. You must <b>Unpublish</b> it to edit, add, or delete questions.
+              This survey is currently published. You must <b>Unpublish</b> it to edit, add, or delete questions.
             </div>
           )}
         </div>

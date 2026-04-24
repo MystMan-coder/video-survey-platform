@@ -1,4 +1,3 @@
-// frontend/lib/api.ts
 import axios from 'axios';
 
 const api = axios.create({
@@ -86,3 +85,4 @@ export const completeSubmission = async (submissionId: number): Promise<any> => 
   const res = await api.post(`/api/submissions/${submissionId}/complete`);
   return res.data;
 };
+

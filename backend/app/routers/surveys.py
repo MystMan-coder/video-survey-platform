@@ -7,19 +7,16 @@ from ..database import get_db
 
 router = APIRouter(prefix="/api/surveys", tags=["surveys"])
 
-
 @router.post("", response_model=schemas.SurveyResponse, status_code=status.HTTP_201_CREATED)
 def create_survey(survey: schemas.SurveyCreate, db: Session = Depends(get_db)):
     """Create a new survey (draft)."""
     return crud.create_survey(db, survey)
-
 
 @router.get("", response_model=List[schemas.SurveyResponse])
 def list_surveys(db: Session = Depends(get_db)):
     """List all surveys."""
     surveys = db.query(models.Survey).order_by(models.Survey.created_at.desc()).all()
     return surveys
-
 
 @router.get("/{survey_id}", response_model=schemas.SurveyDetailResponse)
 def get_survey(survey_id: int, db: Session = Depends(get_db)):
@@ -28,7 +25,6 @@ def get_survey(survey_id: int, db: Session = Depends(get_db)):
     if not db_survey:
         raise HTTPException(status_code=404, detail="Survey not found")
     return db_survey
-
 
 @router.post("/{survey_id}/questions", response_model=schemas.SurveyQuestionResponse, status_code=status.HTTP_201_CREATED)
 def add_question(survey_id: int, question: schemas.SurveyQuestionCreate, db: Session = Depends(get_db)):
@@ -49,38 +45,6 @@ def add_question(survey_id: int, question: schemas.SurveyQuestionCreate, db: Ses
         raise HTTPException(status_code=400, detail="Survey already has 5 questions (maximum allowed)")
 
     return crud.create_question(db, survey_id, question)
-
-
-# @router.put("/questions/{question_id}", response_model=schemas.SurveyQuestionResponse)
-# def update_question(question_id: int, question_update: schemas.SurveyQuestionCreate, db: Session = Depends(get_db)):
-#     """Update an existing question (by global question_id)."""
-#     db_question = db.query(models.SurveyQuestion).filter(models.SurveyQuestion.id == question_id).first()
-#     if not db_question:
-#         raise HTTPException(status_code=404, detail="Question not found")
-
-#     # Check for duplicate order in the same survey (excluding this question)
-#     existing = crud.get_questions_for_survey(db, db_question.survey_id)
-#     for q in existing:
-#         if q.id != question_id and q.order == question_update.order:
-#             raise HTTPException(status_code=400, detail=f"Order {question_update.order} is already used by another question in this survey")
-
-#     db_question.question_text = question_update.question_text
-#     db_question.order = question_update.order
-#     db.commit()
-#     db.refresh(db_question)
-#     return db_question
-
-
-# @router.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-# def delete_question(question_id: int, db: Session = Depends(get_db)):
-#     """Delete a question (by global question_id)."""
-#     db_question = db.query(models.SurveyQuestion).filter(models.SurveyQuestion.id == question_id).first()
-#     if not db_question:
-#         raise HTTPException(status_code=404, detail="Question not found")
-#     db.delete(db_question)
-#     db.commit()
-#     return
-
 
 @router.put("/{survey_id}/questions/{order}", response_model=schemas.SurveyQuestionResponse)
 def update_question_by_order(
@@ -113,7 +77,6 @@ def update_question_by_order(
     db.refresh(question)
     return question
 
-
 @router.delete("/{survey_id}/questions/{order}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_question_by_order(survey_id: int, order: int, db: Session = Depends(get_db)):
     """Delete a question by survey ID and question order (1-5)."""
@@ -126,7 +89,6 @@ def delete_question_by_order(survey_id: int, order: int, db: Session = Depends(g
     db.delete(question)
     db.commit()
     return
-
 
 @router.post("/{survey_id}/publish", response_model=schemas.SurveyResponse)
 def publish_survey(survey_id: int, db: Session = Depends(get_db)):
@@ -147,7 +109,6 @@ def publish_survey(survey_id: int, db: Session = Depends(get_db)):
 
     updates = schemas.SurveyUpdate(is_active=True)
     return crud.update_survey(db, survey_id, updates)
-
 
 @router.post("/{survey_id}/unpublish", response_model=schemas.SurveyResponse)
 def unpublish_survey(survey_id: int, db: Session = Depends(get_db)):
@@ -170,7 +131,6 @@ def delete_survey_endpoint(survey_id: int, db: Session = Depends(get_db)):
     if not survey:
         raise HTTPException(status_code=404, detail="Survey not found")
 
-    # Extra backend protection: Prevent deleting published surveys
     if survey.is_active:
         raise HTTPException(
             status_code=400, 
